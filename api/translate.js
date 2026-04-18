@@ -1,10 +1,8 @@
-import OpenAI from 'openai';
-
-export const config = { api: { bodyParser: { sizeLimit: '1mb' } } };
+const OpenAI = require('openai');
 
 const LANG_NAMES = { en: 'English', yo: 'Yoruba', ha: 'Hausa', ig: 'Igbo' };
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const { text, fromLang, toLang } = req.body;
@@ -12,11 +10,11 @@ export default async function handler(req, res) {
 
   if (fromLang === toLang) return res.status(200).json({ translated: text });
 
-  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  const from   = LANG_NAMES[fromLang] || fromLang;
-  const to     = LANG_NAMES[toLang]   || toLang;
-
   try {
+    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const from   = LANG_NAMES[fromLang] || fromLang;
+    const to     = LANG_NAMES[toLang]   || toLang;
+
     const completion = await client.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
@@ -36,4 +34,6 @@ export default async function handler(req, res) {
     console.error('Translation error:', err);
     return res.status(500).json({ error: err.message });
   }
-}
+};
+
+module.exports.config = { api: { bodyParser: true } };
