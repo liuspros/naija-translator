@@ -4,7 +4,7 @@
   "description": "Real-time Nigerian language speech-to-speech translator",
   "private": true,
   "dependencies": {
-    "openai": "^4.52.0"
+    "openai": "4.52.0"
   },
   "engines": {
     "node": ">=18"
