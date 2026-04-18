@@ -1,0 +1,12 @@
+{
+  "name": "naija-voice",
+  "version": "1.0.0",
+  "description": "Real-time Nigerian language speech-to-speech translator",
+  "private": true,
+  "dependencies": {
+    "openai": "^4.52.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

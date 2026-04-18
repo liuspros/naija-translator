@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/transcribe.js": { "maxDuration": 30 },
+    "api/translate.js":  { "maxDuration": 15 },
+    "api/speak.js":      { "maxDuration": 15 }
+  }
+}

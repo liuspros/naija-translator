@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NaijaVoice — Real-Time Nigerian Language Translator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-deep:        #0d001a;
+      --purple-1:       #5a00cc;
+      --purple-2:       #8a2be2;
+      --purple-3:       #b060ff;
+      --glass-bg:       rgba(90,0,204,0.1);
+      --glass-border:   rgba(138,43,226,0.3);
+      --white:          #ffffff;
+      --white-60:       rgba(255,255,255,0.6);
+      --white-20:       rgba(255,255,255,0.08);
+      --success:        #00e5a0;
+      --danger:         #ff4d6d;
+    }
+
+    html, body { height: 100%; font-family: 'Lexend', sans-serif; background: var(--bg-deep); color: var(--white); overflow-x: hidden; }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background:
+        radial-gradient(ellipse 70% 60% at 15% 10%, rgba(90,0,204,0.4) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 85% 85%, rgba(138,43,226,0.25) 0%, transparent 55%);
+      z-index: 0; pointer-events: none;
+    }
+
+    .orb { position: fixed; border-radius: 50%; filter: blur(90px); pointer-events: none; z-index: 0; animation: drift 14s ease-in-out infinite alternate; }
+    .orb-1 { width: 500px; height: 500px; background: rgba(90,0,204,0.25); top: -150px; left: -150px; }
+    .orb-2 { width: 350px; height: 350px; background: rgba(138,43,226,0.18); bottom: -100px; right: -100px; animation-delay: -5s; }
+
+    @keyframes drift { from { transform: translate(0,0) scale(1); } to { transform: translate(25px,15px) scale(1.08); } }
+
+    .app { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; }
+
+    header { text-align: center; padding: 2rem 1rem 1rem; }
+
+    .logo { display: inline-flex; align-items: center; gap: 0.7rem; margin-bottom: 0.4rem; }
+
+    .logo-icon {
+      width: 44px; height: 44px;
+      background: linear-gradient(135deg, var(--purple-1), var(--purple-3));
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 24px rgba(138,43,226,0.55);
+    }
+
+    .logo-name { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.03em; }
+    .logo-name span { color: var(--purple-3); }
+    .tagline { font-size: 0.75rem; font-weight: 400; color: var(--white-60); letter-spacing: 0.1em; text-transform: uppercase; }
+
+    .status-bar { text-align: center; padding: 0.5rem 1rem; font-size: 0.78rem; color: var(--white-60); }
+    .status-bar .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--success); margin-right: 6px; vertical-align: middle; box-shadow: 0 0 8px var(--success); animation: pulse 2s ease-in-out infinite; }
+
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    .conversation { flex: 1; display: grid; grid-template-columns: 1fr 60px 1fr; gap: 1rem; padding: 1rem 1.5rem 2.5rem; max-width: 1050px; margin: 0 auto; width: 100%; align-items: start; }
+
+    .panel { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 24px; padding: 1.6rem; backdrop-filter: blur(20px); display: flex; flex-direction: column; gap: 1.2rem; transition: border-color 0.3s, box-shadow 0.3s; }
+    .panel.recording { border-color: rgba(255,77,109,0.7); box-shadow: 0 0 40px rgba(255,77,109,0.15); }
+    .panel.speaking { border-color: rgba(0,229,160,0.5); box-shadow: 0 0 40px rgba(0,229,160,0.1); }
+
+    .panel-header { display: flex; align-items: center; justify-content: space-between; }
+
+    .speaker-id { display: flex; align-items: center; gap: 0.5rem; font-size: 0.72rem; font-weight: 600; color: var(--white-60); text-transform: uppercase; letter-spacing: 0.1em; }
+    .speaker-id .badge { width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, var(--purple-1), var(--purple-2)); display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 700; }
+
+    .lang-selector { background: var(--white-20); border: 1px solid var(--glass-border); border-radius: 10px; padding: 0.45rem 2rem 0.45rem 0.8rem; color: var(--white); font-family: 'Lexend', sans-serif; font-size: 0.82rem; font-weight: 500; cursor: pointer; outline: none; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.6rem center; transition: border-color 0.2s; }
+    .lang-selector:focus { border-color: var(--purple-3); }
+    .lang-selector option { background: #170030; color: white; }
+
+    .transcript-box { min-height: 110px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 1rem; font-size: 0.88rem; line-height: 1.65; }
+    .transcript-box .label { font-size: 0.65rem; font-weight: 600; color: var(--white-60); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; }
+    .transcript-box .text { color: var(--white); min-height: 40px; }
+    .transcript-box .text.placeholder { color: rgba(255,255,255,0.25); font-style: italic; }
+
+    .translated-box { min-height: 80px; background: linear-gradient(135deg, rgba(90,0,204,0.15), rgba(138,43,226,0.08)); border: 1px solid rgba(138,43,226,0.25); border-radius: 14px; padding: 1rem; font-size: 0.88rem; line-height: 1.65; }
+    .translated-box .label { font-size: 0.65rem; font-weight: 600; color: var(--purple-3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; }
+    .translated-box .text { color: var(--white); min-height: 40px; }
+    .translated-box .text.placeholder { color: rgba(255,255,255,0.2); font-style: italic; }
+
+    .mic-wrap { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; }
+
+    .mic-btn { width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(135deg, var(--purple-1), var(--purple-2)); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.15s, box-shadow 0.15s; -webkit-tap-highlight-color: transparent; user-select: none; }
+    .mic-btn:hover { transform: scale(1.05); box-shadow: 0 0 30px rgba(138,43,226,0.4); }
+    .mic-btn.recording { background: linear-gradient(135deg, #cc0040, var(--danger)); animation: ring 1.2s ease-in-out infinite; }
+
+    @keyframes ring { 0% { box-shadow: 0 0 0 0 rgba(255,77,109,0.5); } 70% { box-shadow: 0 0 0 18px rgba(255,77,109,0); } 100% { box-shadow: 0 0 0 0 rgba(255,77,109,0); } }
+
+    .mic-btn svg { width: 28px; height: 28px; pointer-events: none; }
+    .mic-hint { font-size: 0.68rem; color: var(--white-60); text-align: center; }
+
+    .wave-bars { display: none; align-items: flex-end; gap: 3px; height: 24px; justify-content: center; margin-bottom: 4px; }
+    .wave-bars.visible { display: flex; }
+    .wave-bars span { width: 3px; background: var(--purple-3); border-radius: 2px; animation: wave 0.8s ease-in-out infinite alternate; }
+    .wave-bars span:nth-child(1) { height: 8px; animation-delay: 0s; }
+    .wave-bars span:nth-child(2) { height: 18px; animation-delay: 0.1s; }
+    .wave-bars span:nth-child(3) { height: 12px; animation-delay: 0.2s; }
+    .wave-bars span:nth-child(4) { height: 22px; animation-delay: 0.3s; }
+    .wave-bars span:nth-child(5) { height: 10px; animation-delay: 0.4s; }
+    .wave-bars span:nth-child(6) { height: 16px; animation-delay: 0.15s; }
+    @keyframes wave { from { transform: scaleY(0.4); } to { transform: scaleY(1); } }
+
+    .loader { display: none; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.15); border-top-color: var(--purple-3); border-radius: 50%; animation: spin 0.7s linear infinite; margin: 6px auto 0; }
+    .loader.visible { display: block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .center-col { display: flex; align-items: center; justify-content: center; padding-top: 11rem; }
+    .arrow-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .arrow-wrap svg { width: 26px; height: 26px; opacity: 0.3; animation: floatArrow 2.5s ease-in-out infinite alternate; }
+    .arrow-wrap svg:last-child { animation-delay: -1.25s; transform: rotate(180deg); }
+    @keyframes floatArrow { from { opacity: 0.2; transform: translateY(-3px); } to { opacity: 0.45; transform: translateY(3px); } }
+
+    .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); background: rgba(255,77,109,0.12); border: 1px solid rgba(255,77,109,0.35); color: white; border-radius: 12px; padding: 0.7rem 1.4rem; font-size: 0.82rem; display: none; z-index: 100; backdrop-filter: blur(12px); white-space: nowrap; }
+    .toast.visible { display: block; animation: fadeUp 0.3s ease; }
+    @keyframes fadeUp { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+    footer { text-align: center; padding: 1rem; font-size: 0.7rem; color: rgba(255,255,255,0.2); }
+    footer span { color: var(--purple-3); }
+
+    @media (max-width: 680px) {
+      .conversation { grid-template-columns: 1fr; }
+      .center-col { padding-top: 0; }
+      .arrow-wrap { flex-direction: row; }
+      .arrow-wrap svg:last-child { transform: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+
+  <div class="app">
+    <header>
+      <div class="logo">
+        <div class="logo-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="white" stroke-width="1.5" opacity="0.3"/>
+            <path d="M12 3C7.03 3 3 7.03 3 12s4.03 9 9 9" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            <path d="M12 3c2 2.5 3 5.5 3 9s-1 6.5-3 9" stroke="white" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+            <path d="M3 12h18" stroke="white" stroke-width="1.5" opacity="0.4"/>
+            <path d="M12 7v10M9 9.5l3-2.5 3 2.5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="logo-name">Naija<span>Voice</span></div>
+      </div>
+      <div class="tagline">Real-Time Nigerian Language Translator</div>
+    </header>
+
+    <div class="status-bar">
+      <span class="dot"></span>
+      Ready — Select your languages and hold the mic to speak
+    </div>
+
+    <main class="conversation">
+
+      <!-- Speaker A -->
+      <div class="panel" id="panelA">
+        <div class="panel-header">
+          <div class="speaker-id">
+            <div class="badge">A</div>
+            Speaker A
+          </div>
+          <select class="lang-selector" id="langA">
+            <option value="en">English</option>
+            <option value="yo">Yoruba</option>
+            <option value="ha">Hausa</option>
+            <option value="ig">Igbo</option>
+          </select>
+        </div>
+
+        <div class="transcript-box">
+          <div class="label">You said</div>
+          <div class="wave-bars" id="waveA"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+          <div class="text placeholder" id="transcriptA">Hold the mic and speak...</div>
+          <div class="loader" id="loaderA"></div>
+        </div>
+
+        <div class="translated-box">
+          <div class="label">Translation sent to B</div>
+          <div class="text placeholder" id="translatedA">Translation will appear here...</div>
+        </div>
+
+        <div class="mic-wrap">
+          <button class="mic-btn" id="micA"
+            onmousedown="startRecord('A')" onmouseup="stopRecord('A')"
+            ontouchstart="startRecord('A')" ontouchend="stopRecord('A')">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" fill="white"/>
+              <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" fill="white"/>
+            </svg>
+          </button>
+          <div class="mic-hint" id="hintA">Hold to speak</div>
+        </div>
+      </div>
+
+      <!-- Center -->
+      <div class="center-col">
+        <div class="arrow-wrap">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" style="transform:rotate(180deg);animation-delay:-1.25s"><path d="M5 12h14M13 6l6 6-6 6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+      </div>
+
+      <!-- Speaker B -->
+      <div class="panel" id="panelB">
+        <div class="panel-header">
+          <div class="speaker-id">
+            <div class="badge">B</div>
+            Speaker B
+          </div>
+          <select class="lang-selector" id="langB">
+            <option value="yo">Yoruba</option>
+            <option value="ha">Hausa</option>
+            <option value="ig">Igbo</option>
+            <option value="en">English</option>
+          </select>
+        </div>
+
+        <div class="transcript-box">
+          <div class="label">You said</div>
+          <div class="wave-bars" id="waveB"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+          <div class="text placeholder" id="transcriptB">Hold the mic and speak...</div>
+          <div class="loader" id="loaderB"></div>
+        </div>
+
+        <div class="translated-box">
+          <div class="label">Translation sent to A</div>
+          <div class="text placeholder" id="translatedB">Translation will appear here...</div>
+        </div>
+
+        <div class="mic-wrap">
+          <button class="mic-btn" id="micB"
+            onmousedown="startRecord('B')" onmouseup="stopRecord('B')"
+            ontouchstart="startRecord('B')" ontouchend="stopRecord('B')">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" fill="white"/>
+              <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" fill="white"/>
+            </svg>
+          </button>
+          <div class="mic-hint" id="hintB">Hold to speak</div>
+        </div>
+      </div>
+
+    </main>
+
+    <footer>Built by <span>Lius Creative</span> &mdash; Powered by OpenAI</footer>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    let mediaRecorder = null;
+    let audioChunks   = [];
+    let activePanel   = null;
+    let micStream     = null;
+
+    const LANG_NAMES = { en:'English', yo:'Yoruba', ha:'Hausa', ig:'Igbo' };
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('visible');
+      setTimeout(() => t.classList.remove('visible'), 4000);
+    }
+
+    function getSupportedMimeType() {
+      const types = ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/mp4'];
+      return types.find(t => MediaRecorder.isTypeSupported(t)) || '';
+    }
+
+    function blobToBase64(blob) {
+      return new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload  = () => res(r.result.split(',')[1]);
+        r.onerror = rej;
+        r.readAsDataURL(blob);
+      });
+    }
+
+    async function startRecord(panel) {
+      if (activePanel) return;
+      try {
+        micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch {
+        showToast('Microphone access denied. Please allow mic access in your browser.');
+        return;
+      }
+
+      audioChunks = [];
+      activePanel = panel;
+
+      document.getElementById(`panel${panel}`).classList.add('recording');
+      document.getElementById(`mic${panel}`).classList.add('recording');
+      document.getElementById(`wave${panel}`).classList.add('visible');
+      document.getElementById(`hint${panel}`).textContent = 'Recording...';
+
+      const txt = document.getElementById(`transcript${panel}`);
+      txt.textContent = 'Listening...';
+      txt.classList.remove('placeholder');
+
+      const mimeType = getSupportedMimeType();
+      mediaRecorder = new MediaRecorder(micStream, mimeType ? { mimeType } : {});
+      mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+      mediaRecorder.start();
+    }
+
+    async function stopRecord(panel) {
+      if (!mediaRecorder || activePanel !== panel) return;
+
+      mediaRecorder.stop();
+      micStream.getTracks().forEach(t => t.stop());
+
+      document.getElementById(`panel${panel}`).classList.remove('recording');
+      document.getElementById(`mic${panel}`).classList.remove('recording');
+      document.getElementById(`wave${panel}`).classList.remove('visible');
+      document.getElementById(`hint${panel}`).textContent = 'Hold to speak';
+
+      const txtEl   = document.getElementById(`transcript${panel}`);
+      const transEl = document.getElementById(`translated${panel}`);
+      txtEl.textContent = 'Processing...';
+
+      const other        = panel === 'A' ? 'B' : 'A';
+      const otherTransEl = document.getElementById(`translated${other}`);
+      const otherPanel   = document.getElementById(`panel${other}`);
+      const fromLang     = document.getElementById(`lang${panel}`).value;
+      const toLang       = document.getElementById(`lang${other}`).value;
+
+      await new Promise(r => mediaRecorder.addEventListener('stop', r, { once: true }));
+
+      document.getElementById(`loader${panel}`).classList.add('visible');
+
+      try {
+        const mimeType = getSupportedMimeType();
+        const blob   = new Blob(audioChunks, { type: mimeType || 'audio/webm' });
+        const base64 = await blobToBase64(blob);
+
+        // 1 — Transcribe
+        const tRes = await fetch('/api/transcribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ audio: base64, language: fromLang, mimeType: mimeType || 'audio/webm' })
+        });
+        if (!tRes.ok) throw new Error(await tRes.text());
+        const { text } = await tRes.json();
+
+        txtEl.textContent = text || '(No speech detected)';
+        txtEl.classList.remove('placeholder');
+        if (!text) { document.getElementById(`loader${panel}`).classList.remove('visible'); activePanel = null; return; }
+
+        // 2 — Translate
+        const trRes = await fetch('/api/translate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, fromLang, toLang })
+        });
+        if (!trRes.ok) throw new Error(await trRes.text());
+        const { translated } = await trRes.json();
+
+        transEl.textContent = translated;
+        transEl.classList.remove('placeholder');
+        otherTransEl.textContent = translated;
+        otherTransEl.classList.remove('placeholder');
+
+        document.getElementById(`loader${panel}`).classList.remove('visible');
+
+        // 3 — Speak on other side
+        otherPanel.classList.add('speaking');
+        const sRes = await fetch('/api/speak', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: translated, lang: toLang })
+        });
+        if (!sRes.ok) throw new Error('TTS failed');
+
+        const audioBlob = await sRes.blob();
+        const url = URL.createObjectURL(audioBlob);
+        const audio = new Audio(url);
+        audio.play();
+        audio.onended = () => { otherPanel.classList.remove('speaking'); URL.revokeObjectURL(url); };
+
+      } catch (err) {
+        console.error(err);
+        showToast('Error: ' + (err.message || 'Something went wrong. Check API key.'));
+        txtEl.textContent = 'Error — try again';
+        document.getElementById(`loader${panel}`).classList.remove('visible');
+        otherPanel.classList.remove('speaking');
+      }
+
+      activePanel = null;
+    }
+
+    // Prevent context menu on long-press (mobile)
+    document.querySelectorAll('.mic-btn').forEach(b => b.addEventListener('contextmenu', e => e.preventDefault()));
+  </script>
+</body>
+</html>
